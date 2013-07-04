@@ -1,6 +1,6 @@
-PayFast Marketpress Module v1.0 for Marketpress v2.2
+PayFast Marketpress Module v2.0 for Marketpress v2.8.7
 ----------------------------------------------------
-Copyright (c) 2011 PayFast (Pty) Ltd
+Copyright (c) 2013 PayFast (Pty) Ltd
 
 LICENSE:
  
@@ -22,6 +22,6 @@ General Public License.
 *                                                                            *
 *    Please see the URL below for all information concerning this module:    *
 *                                                                            *
-*                 http://www.payfast.co.za/help/marketpress
+*                 http://www.payfast.co.za/developers/marketpress
 *                                                                            *
 ******************************************************************************

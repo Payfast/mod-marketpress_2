@@ -28,7 +28,7 @@
 define( 'PF_SOFTWARE_NAME', 'MarketPress' );
 define( 'PF_SOFTWARE_VER', WPSC_PRESENTABLE_VERSION );
 define( 'PF_MODULE_NAME', 'PayFast-MarketPress' );
-define( 'PF_MODULE_VER', '1.01' );
+define( 'PF_MODULE_VER', '1.1' );
 
 // Features
 // - PHP
@@ -148,23 +148,40 @@ function pfGetData()
  * 
  * @author Jonathan Smit
  */
-function pfValidSignature( $pfData = null, &$pfParamString = null )
+function pfValidSignature( $pfData = null, &$pfParamString = null, $pfPassphrase = null )
 {
     // Dump the submitted variables and calculate security signature
     foreach( $pfData as $key => $val )
     {
-    	if( $key != 'signature' )
-    		$pfParamString .= $key .'='. urlencode( $val ) .'&';
+        if( $key != 'signature' )
+        {
+            $pfParamString .= $key .'='. urlencode( $val ) .'&';
+        }
+        else
+        {
+            break;
+        }
     }
 
     // Remove the last '&' from the parameter string
     $pfParamString = substr( $pfParamString, 0, -1 );
-    $signature = md5( $pfParamString );
+
+    if( !is_null( $pfPassphrase ) )
+    {
+        $pfParamStringWithPassphrase = $pfParamString."&passphrase=". urlencode( $pfPassphrase );
+        $signature = md5( $pfParamStringWithPassphrase );
+    }
+    else
+    {
+        $signature = md5( $pfParamString );
+    }
+
     
     $result = ( $pfData['signature'] == $signature );
 
     pflog( 'Signature = '. ( $result ? 'valid' : 'invalid' ) );
-
+    pflog('PFString = '.$pfParamString);
+    
     return( $result );
 }
 // }}}

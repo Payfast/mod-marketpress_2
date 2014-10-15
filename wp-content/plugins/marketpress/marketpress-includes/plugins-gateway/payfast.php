@@ -65,7 +65,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
     var $payment_action = 'Sale';
 
     //payfast vars
-    var $pfMerchantId, $pfMerchantKey, $SandboxFlag, $returnURL, $cancelURL, $payfastURL, $version, $currencyCode;
+    var $pfMerchantId, $pfMerchantKey, $SandboxFlag, $returnURL, $cancelURL, $payfastURL, $version, $currencyCode, $passphrase;
 
     /****** Below are the public methods you may overwrite via a plugin ******/
     /**
@@ -107,7 +107,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
             $this->payfastURL = 'https://www.payfast.co.za/eng/process';
         }
 
-        
+        $this->passphrase = $mp->get_setting('gateways->payfast->passphrase');
     }
 
     /**
@@ -222,9 +222,17 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
                 $pfOutputSig .= $key .'='. urlencode( $val ) .'&';
             }
         }
-        // Remove last ampersand
-        $getString = substr( $pfOutputSig, 0, -1 );
-      
+
+        
+        if( !empty( $this->passphrase ) )
+        {
+            $secureString .= 'passphrase='.urlencode( $this->passphrase );
+        }
+        else
+        {
+            // Remove last ampersand
+            $getString = substr( $pfOutputSig, 0, -1 );
+        }
 
         
         $pfOutput = $getString.'&signature='.md5($getString);
@@ -321,6 +329,15 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
                 </td>
             </tr>
             <tr>
+                <th scope="row"><?php _e('PayFast Passphrase', 'mp') ?></th>
+                <td>
+                    <span class="description"><?php _e('DO NOT INPUT A VALUE UNLESS YOU HAVE SET ONE IN THE SETTINGS SECTION OF YOUR PAYFAST SETTINGS.', 'mp')?></span>
+                    <p>
+                        <input value="<?php echo esc_attr($mp->get_setting('gateways->payfast->passphrase')); ?>" size="20" name="mp[gateways][payfast][passphrase]" type="text" />
+                    </p>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row"><?php _e('Log Debugging Info?', 'mp') ?></th>
                 <td>
                     <span class="description"><?php _e('This setting will log all PayFast communication to the "payfast.log" file.', 'mp')?></span>
@@ -393,9 +410,11 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
         if (!$pfError && !$pfDone)
         {
             pflog('Verify security signature');
+
+            $pfPassPhrase = !empty( $this->passphrase ) ? $this->passphrase : null;
         
             // If signature different, log for debugging
-            if (!pfValidSignature($pfData, $pfParamString))
+            if (!pfValidSignature($pfData, $pfParamString, $pfPassPhrase ) )
             {
                 $pfError = true;
                 $pfErrMsg = PF_ERR_INVALID_SIGNATURE;

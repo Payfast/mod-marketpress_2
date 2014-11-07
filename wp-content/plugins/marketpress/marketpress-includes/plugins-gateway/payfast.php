@@ -65,7 +65,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
     var $payment_action = 'Sale';
 
     //payfast vars
-    var $pfMerchantId, $pfMerchantKey, $SandboxFlag, $returnURL, $cancelURL, $payfastURL, $version, $currencyCode, $passphrase;
+    var $pfMerchantId, $pfMerchantKey, $SandboxFlag, $returnURL, $cancelURL, $payfastURL, $version, $currencyCode, $passphrase, $test_mode;
 
     /****** Below are the public methods you may overwrite via a plugin ******/
     /**
@@ -106,6 +106,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
             $this->pfMerchantKey = $mp->get_setting('gateways->payfast->merchantkey');
             $this->payfastURL = 'https://www.payfast.co.za/eng/process';
         }
+        $this->test_mode = $mp->get_setting('gateways->payfast->mode') == 'test' ? true : false;
 
         $this->passphrase = $mp->get_setting('gateways->payfast->passphrase');
     }
@@ -219,23 +220,23 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
         {
             if(!empty($val))
             {
-                $pfOutputSig .= $key .'='. urlencode( $val ) .'&';
+                $pfOutputSig .= $key .'='. urlencode( trim( $val ) ) .'&';
             }
         }
 
         
-        if( !empty( $this->passphrase ) )
+        if( !empty( $this->passphrase ) && !$this->test_mode )
         {
-            $secureString .= 'passphrase='.urlencode( $this->passphrase );
+            $getString .= $pfOutputSig.'passphrase='.urlencode( $this->passphrase );
         }
         else
         {
             // Remove last ampersand
-            $getString = substr( $pfOutputSig, 0, -1 );
+            $getString .= substr( $pfOutputSig, 0, -1 );
         }
 
         
-        $pfOutput = $getString.'&signature='.md5($getString);
+        $pfOutput = $pfOutputSig .'signature='.md5($getString);
 
         // Create the order
         $payment_info['gateway_public_name'] = $this->public_name;
@@ -248,7 +249,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
         $paid = false;
 
         $order = $mp->create_order($order_id, $mp->get_cart_contents(), $_SESSION['mp_shipping_info'], $payment_info, $paid);
-        //echo $pfOutput;
+        
         // Send to PayFast (GET)
         header("Location: " . $this->payfastURL . "?" . $pfOutput);
         exit(0);
@@ -378,7 +379,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
         $pfErrMsg = '';
         $pfDone = false;
         $pfData = array();
-        $pfHost = (($mp->get_setting('gateways->payfast->mode') == 'live') ? 'www' : 'sandbox') . '.payfast.co.za';
+        $pfHost = ( $this->test_mode ? 'www' : 'sandbox') . '.payfast.co.za';
         $pfOrderId = '';
         $pfParamString = '';      
        
@@ -411,7 +412,7 @@ class MP_Gateway_PayFast extends MP_Gateway_API {
         {
             pflog('Verify security signature');
 
-            $pfPassPhrase = !empty( $this->passphrase ) ? $this->passphrase : null;
+            $pfPassPhrase = !empty( $this->passphrase ) && !$this->test_mode ? $this->passphrase : null;
         
             // If signature different, log for debugging
             if (!pfValidSignature($pfData, $pfParamString, $pfPassPhrase ) )
